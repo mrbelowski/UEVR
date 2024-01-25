@@ -1763,13 +1763,24 @@ void IXRTrackingSystemHook::update_view_rotation(sdk::UObject* reference_obj, Ro
             og_controller_pos = glm::vec3{vr->get_aim_position(left_controller_index)};
             right_controller_forward = og_controller_rot * glm::vec3{0.0f, 0.0f, -1.0f};
         }
-        // We need to construct a sightline from the standing origin to the direction the controller is facing
+        // For hip aim, we need to construct a sightline from the standing origin to the direction the controller is facing
         // This is so the camera will be facing a more correct direction
         // rather than the raw controller rotation
-        const auto right_controller_end = og_controller_pos + (right_controller_forward * 1000.0f);
-        const auto adjusted_forward = glm::normalize(right_controller_end - glm::vec3{vr->get_standing_origin()});
-        const auto target_forward = utility::math::to_quat(adjusted_forward);
-
+        glm::quat target_forward;
+        const auto standing_origin = glm::vec3{vr->get_standing_origin()};
+        const auto controller_to_hmd_horizontal_distance = std::abs((og_controller_pos - standing_origin)[0]);
+        const auto controller_to_hmd_vertical_distance = std::abs((og_controller_pos - standing_origin)[1]);
+        SPDLOG_ERROR("[JIM] aiming x and y offsets are {}", controller_to_hmd_horizontal_distance, controller_to_hmd_vertical_distance);
+        // units are metres here?
+        if (controller_to_hmd_horizontal_distance < 0.2 && controller_to_hmd_vertical_distance < 0.2) {
+            // assume we're aiming down the sights when the controller is close to the HMD, use the unadjusted controller rotation
+            target_forward = og_controller_rot;
+        } else {
+            const auto right_controller_end = og_controller_pos + (right_controller_forward * 1000.0f);
+            const auto adjusted_forward_for_hip_aim = glm::normalize(right_controller_end - standing_origin);
+            target_forward = utility::math::to_quat(adjusted_forward_for_hip_aim);
+        }
+        SPDLOG_ERROR("[JIM] aiming rotation is {}, {}, {}, {}", target_forward.w, target_forward.x, target_forward.y, target_forward.z);
         glm::quat right_controller_forward_rot{};
 
         if (vr->is_aim_interpolation_enabled()) {
