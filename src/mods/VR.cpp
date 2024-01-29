@@ -979,7 +979,7 @@ void VR::on_xinput_get_state(uint32_t* retval, uint32_t user_index, XINPUT_STATE
     }
 
     // Determine if snapturn should be run on frame
-    if (m_snapturn->value()) {
+    if (m_snapturn->value() && !UObjectHook::get()->is_uobject_hook_disabled()) {
         DPadMethod dpad_method = get_dpad_method();
         const auto snapturn_deadzone = get_snapturn_js_deadzone();
         float stick_axis{};
