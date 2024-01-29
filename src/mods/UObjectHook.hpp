@@ -461,8 +461,8 @@ private:
     ModSlider::Ptr m_attach_lerp_speed{ModSlider::create(generate_name("AttachLerpSpeed"), 0.01f, 30.0f, 15.0f)};
 
     ModKey::Ptr m_keybind_toggle_uobject_hook{ModKey::create(generate_name("ToggleUObjectHookKey"))};
-    bool m_fixed_visibilities{false};
     bool m_uobject_hook_disabled{false};
+    bool m_fixed_visibilities{false};
 
     ValueList m_options{
         *m_enabled_at_startup,
