@@ -1931,7 +1931,7 @@ void VR::on_frame() {
                 }
             }
             m_xinput_context.headlocked_begin_held = false;
-        } else if (long_press_is_uobject_hook_toggle) {
+        } else if (!long_press_is_uobject_hook_toggle) {
             if (m_aim_method->value() != VR::AimMethod::GAME) {
                 m_previous_aim_method = (VR::AimMethod)m_aim_method->value();
             }
@@ -2408,7 +2408,8 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
 
             m_aim_multiplayer_support->draw("Multiplayer Support");
 
-            m_l3_r3_long_press_mode->draw("L3 + R3 Long Press Mode");
+            ImGui::TextWrapped("L3 + R3 Long Press Mode");
+            m_l3_r3_long_press_mode->draw("Type");
 
             ImGui::TreePop();
         }

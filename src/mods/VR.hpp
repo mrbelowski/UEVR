@@ -767,7 +767,7 @@ private:
         "Two Handed (Left)",
     };
 
-    static const inline std::vector<std::string> s_l3_r3_long_press_type{
+    static const inline std::vector<std::string> s_l3_r3_long_press_mode_names{
         "Toggle Aim Mode",
         "Toggle UObject Hook Disabled"
     };
@@ -815,7 +815,7 @@ private:
     // Aim method and movement orientation are not the same thing, but they can both have the same options
     const ModCombo::Ptr m_aim_method{ ModCombo::create(generate_name("AimMethod"), s_aim_method_names, AimMethod::GAME) };
     const ModCombo::Ptr m_movement_orientation{ ModCombo::create(generate_name("MovementOrientation"), s_aim_method_names, AimMethod::GAME) };
-    const ModCombo::Ptr m_l3_r3_long_press_mode{ ModCombo::create(generate_name("L3R3LongPressMode"), s_l3_r3_long_press_type, L3_R3_LONG_PRESS_MODE::TOGGLE_AIM_MODE) };
+    const ModCombo::Ptr m_l3_r3_long_press_mode{ ModCombo::create(generate_name("L3R3LongPressMode"), s_l3_r3_long_press_mode_names, L3_R3_LONG_PRESS_MODE::TOGGLE_AIM_MODE) };
     AimMethod m_previous_aim_method{ AimMethod::GAME };
     const ModToggle::Ptr m_aim_use_pawn_control_rotation{ ModToggle::create(generate_name("AimUsePawnControlRotation"), false) };
     const ModToggle::Ptr m_aim_modify_player_control_rotation{ ModToggle::create(generate_name("AimModifyPlayerControlRotation"), false) };
