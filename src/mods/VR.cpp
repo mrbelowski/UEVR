@@ -1920,19 +1920,8 @@ void VR::on_frame() {
         ImGui::Text("Continue holding down L3 + R3 to toggle aim method");
 
         if (std::chrono::steady_clock::now() - m_xinput_context.headlocked_begin >= std::chrono::seconds(1)) {
-            if (m_aim_method->value() == VR::AimMethod::GAME) {
-                m_aim_method->value() = m_previous_aim_method;
-            } else {
-                m_aim_method->value() = VR::AimMethod::GAME; // turns it off
-            }
-
+            UObjectHook::get()->set_uobject_hook_disabled(!UObjectHook::get()->is_uobject_hook_disabled());
             m_xinput_context.headlocked_begin_held = false;
-        } else {
-            if (m_aim_method->value() != VR::AimMethod::GAME) {
-                m_previous_aim_method = (VR::AimMethod)m_aim_method->value();
-            } else if (m_previous_aim_method == VR::AimMethod::GAME) {
-                m_previous_aim_method = VR::AimMethod::HEAD; // so it will at least be something
-            }
         }
 
         const auto window_size = ImGui::GetWindowSize();
