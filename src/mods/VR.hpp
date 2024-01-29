@@ -439,7 +439,8 @@ public:
     }
 
     AimMethod get_aim_method() const {
-        if (m_aim_temp_disabled || UObjectHook::get()->is_uobject_hook_disabled()) {
+        const auto uobject_hook = UObjectHook::get();
+        if (m_aim_temp_disabled || uobject_hook->is_uobject_hook_disabled() || uobject_hook->is_missing_all_controller_attachments()) {
             return AimMethod::GAME;
         }
 
