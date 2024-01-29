@@ -19,6 +19,7 @@
 #include "vr/CVarManager.hpp"
 
 #include "Mod.hpp"
+#include "UObjectHook.hpp"
 
 #undef max
 #include <tracy/Tracy.hpp>
@@ -433,7 +434,7 @@ public:
     }
 
     AimMethod get_aim_method() const {
-        if (m_aim_temp_disabled) {
+        if (m_aim_temp_disabled || UObjectHook::get()->is_uobject_hook_disabled()) {
             return AimMethod::GAME;
         }
 
@@ -465,16 +466,18 @@ public:
     }
     
     bool is_any_aim_method_active() const {
-        return m_aim_method->value() > AimMethod::GAME && !m_aim_temp_disabled;
+        return m_aim_method->value() > AimMethod::GAME && !m_aim_temp_disabled && !UObjectHook::get()->is_uobject_hook_disabled();
     }
 
     bool is_headlocked_aim_enabled() const {
-        return m_aim_method->value() == AimMethod::HEAD && !m_aim_temp_disabled;
+        return m_aim_method->value() == AimMethod::HEAD && !m_aim_temp_disabled && !UObjectHook::get()->is_uobject_hook_disabled();
     }
 
     bool is_controller_aim_enabled() const {
         const auto value = m_aim_method->value();
-        return !m_aim_temp_disabled && (value == AimMethod::LEFT_CONTROLLER || value == AimMethod::RIGHT_CONTROLLER || value == AimMethod::TWO_HANDED_LEFT || value == AimMethod::TWO_HANDED_RIGHT);
+        return !m_aim_temp_disabled &&
+               !UObjectHook::get()->is_uobject_hook_disabled() &&
+            (value == AimMethod::LEFT_CONTROLLER || value == AimMethod::RIGHT_CONTROLLER || value == AimMethod::TWO_HANDED_LEFT || value == AimMethod::TWO_HANDED_RIGHT);
     }
 
     bool is_controller_movement_enabled() const {
@@ -521,7 +524,7 @@ public:
     }
 
     bool is_roomscale_enabled() const {
-        return m_roomscale_movement->value() && !m_aim_temp_disabled;
+        return m_roomscale_movement->value() && !m_aim_temp_disabled && !UObjectHook::get()->is_uobject_hook_disabled();
     }
 
     bool is_dpad_shifting_enabled() const {
