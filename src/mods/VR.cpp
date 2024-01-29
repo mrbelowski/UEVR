@@ -24,6 +24,7 @@
 #include "utility/Logging.hpp"
 
 #include "VR.hpp"
+#include "UObjectHook.hpp"
 
 std::shared_ptr<VR>& VR::get() {
     static std::shared_ptr<VR> instance = std::make_shared<VR>();
@@ -1102,7 +1103,8 @@ void VR::update_imgui_state_from_xinput_state(XINPUT_STATE& state, bool is_vr_co
 
     // We need to adjust the stick values based on the selected movement orientation value if the user wants to do this
     // It will either need to be adjusted by the HMD rotation or one of the controllers.
-    if (is_using_this_controller && m_movement_orientation->value() != VR::AimMethod::GAME && m_movement_orientation->value() != m_aim_method->value()) {
+    if (!UObjectHook::get()->is_uobject_hook_disabled() &&
+        is_using_this_controller && m_movement_orientation->value() != VR::AimMethod::GAME && m_movement_orientation->value() != m_aim_method->value()) {
         const auto left_stick_og = glm::vec2((float)state.Gamepad.sThumbLX, (float)state.Gamepad.sThumbLY );
         const auto left_stick_magnitude = glm::clamp(glm::length(left_stick_og), -32767.0f, 32767.0f);
         const auto left_stick = glm::normalize(left_stick_og);
