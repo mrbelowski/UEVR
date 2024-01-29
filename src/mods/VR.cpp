@@ -1913,6 +1913,7 @@ void VR::on_frame() {
     }
 
     if (is_allowed_draw_window && m_xinput_context.headlocked_begin_held && !FrameworkConfig::get()->is_l3_r3_long_press()) {
+        bool long_press_is_uobject_hook_toggle = m_l3_r3_long_press_mode->value() == VR::L3_R3_LONG_PRESS_MODE::TOGGLE_DISABLE_UOBJECT_HOOK;
         const auto rt_size = g_framework->get_rt_size();
 
         ImGui::Begin("AimMethod Notification", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav);
@@ -1920,8 +1921,23 @@ void VR::on_frame() {
         ImGui::Text("Continue holding down L3 + R3 to toggle aim method");
 
         if (std::chrono::steady_clock::now() - m_xinput_context.headlocked_begin >= std::chrono::seconds(1)) {
-            UObjectHook::get()->set_uobject_hook_disabled(!UObjectHook::get()->is_uobject_hook_disabled());
+            if (long_press_is_uobject_hook_toggle) {
+                UObjectHook::get()->toggle_uobject_hook_disabled();
+            } else {
+                if (m_aim_method->value() == VR::AimMethod::GAME) {
+                    m_aim_method->value() = m_previous_aim_method;
+                } else {
+                    m_aim_method->value() = VR::AimMethod::GAME; // turns it off
+                }
+            }
             m_xinput_context.headlocked_begin_held = false;
+        } else if (long_press_is_uobject_hook_toggle) {
+            if (m_aim_method->value() != VR::AimMethod::GAME) {
+                m_previous_aim_method = (VR::AimMethod)m_aim_method->value();
+            }
+            else if (m_previous_aim_method == VR::AimMethod::GAME) {
+                m_previous_aim_method = VR::AimMethod::HEAD; // so it will at least be something
+            }
         }
 
         const auto window_size = ImGui::GetWindowSize();
@@ -2391,6 +2407,8 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
             m_aim_use_pawn_control_rotation->draw("Use Pawn Control Rotation");
 
             m_aim_multiplayer_support->draw("Multiplayer Support");
+
+            m_l3_r3_long_press_mode->draw("L3 + R3 Long Press Mode");
 
             ImGui::TreePop();
         }

@@ -55,6 +55,11 @@ public:
         GESTURE_HEAD_RIGHT,
     };
 
+    enum L3_R3_LONG_PRESS_MODE : int32_t {
+        TOGGLE_AIM_MODE,
+        TOGGLE_DISABLE_UOBJECT_HOOK
+    };
+
     static const inline std::string s_action_pose = "/actions/default/in/Pose";
     static const inline std::string s_action_grip_pose = "/actions/default/in/GripPose";
     static const inline std::string s_action_trigger = "/actions/default/in/Trigger";
@@ -762,6 +767,11 @@ private:
         "Two Handed (Left)",
     };
 
+    static const inline std::vector<std::string> s_l3_r3_long_press_type{
+        "Toggle Aim Mode",
+        "Toggle UObject Hook Disabled"
+    };
+
     static const inline std::vector<std::string> s_dpad_method_names {
         "Right Thumbrest + Left Joystick",
         "Left Thumbrest + Right Joystick",
@@ -805,6 +815,7 @@ private:
     // Aim method and movement orientation are not the same thing, but they can both have the same options
     const ModCombo::Ptr m_aim_method{ ModCombo::create(generate_name("AimMethod"), s_aim_method_names, AimMethod::GAME) };
     const ModCombo::Ptr m_movement_orientation{ ModCombo::create(generate_name("MovementOrientation"), s_aim_method_names, AimMethod::GAME) };
+    const ModCombo::Ptr m_l3_r3_long_press_mode{ ModCombo::create(generate_name("L3R3LongPressMode"), s_l3_r3_long_press_type, L3_R3_LONG_PRESS_MODE::TOGGLE_AIM_MODE) };
     AimMethod m_previous_aim_method{ AimMethod::GAME };
     const ModToggle::Ptr m_aim_use_pawn_control_rotation{ ModToggle::create(generate_name("AimUsePawnControlRotation"), false) };
     const ModToggle::Ptr m_aim_modify_player_control_rotation{ ModToggle::create(generate_name("AimModifyPlayerControlRotation"), false) };
@@ -920,6 +931,7 @@ private:
         *m_snapturn_angle,
         *m_controller_pitch_offset,
         *m_aim_method,
+        *m_l3_r3_long_press_mode,
         *m_movement_orientation,
         *m_aim_use_pawn_control_rotation,
         *m_aim_modify_player_control_rotation,

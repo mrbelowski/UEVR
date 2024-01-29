@@ -44,8 +44,13 @@ public:
     }
 
     void activate();
-    bool is_uobject_hook_disabled() { return m_uobject_hook_disabled; }
-    void set_uobject_hook_disabled(bool disabled) { m_uobject_hook_disabled = disabled; }
+    bool is_uobject_hook_disabled() {
+        return m_uobject_hook_disabled;
+    }
+    void toggle_uobject_hook_disabled() {
+        m_uobject_hook_disabled = !m_uobject_hook_disabled;
+        m_fixed_visibilities = false;
+    }
 
 protected:
     std::string_view get_name() const override { return "UObjectHook"; };
