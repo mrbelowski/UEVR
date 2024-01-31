@@ -3194,7 +3194,7 @@ void VR::recenter_view() {
 }
 
 void VR::gamepad_snapturn(XINPUT_STATE& state) {
-    if (!m_snapturn->value()) {
+    if (!m_snapturn->value() || UObjectHook::get()->is_uobject_hook_disabled()) {
         return;
     }
 
@@ -3221,7 +3221,7 @@ void VR::gamepad_snapturn(XINPUT_STATE& state) {
 }
 
 void VR::process_snapturn() {
-    if (!m_snapturn_on_frame) {
+    if (!m_snapturn_on_frame || UObjectHook::get()->is_uobject_hook_disabled()) {
         return;
     }
 
