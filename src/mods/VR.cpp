@@ -1777,6 +1777,10 @@ void VR::load_cameras() try {
             if (auto decoupled_pitch_ui_adjust = cfg.get<bool>(std::format("decoupled_pitch_ui_adjust{}", i))) {
                 data.decoupled_pitch_ui_adjust = *decoupled_pitch_ui_adjust;
             }
+
+            if (auto decoupled_pitch_ui_adjust_if_pawn = cfg.get<bool>(std::format("decoupled_pitch_ui_adjust_if_pawn{}", i))) {
+                data.decoupled_pitch_ui_adjust_if_pawn = *decoupled_pitch_ui_adjust_if_pawn;
+            }
         }
     }
 } catch(...) {
@@ -1798,6 +1802,7 @@ void VR::load_camera(int index) {
     m_world_scale->value() = data.world_scale;
     m_decoupled_pitch->value() = data.decoupled_pitch;
     m_decoupled_pitch_ui_adjust->value() = data.decoupled_pitch_ui_adjust;
+    m_decoupled_pitch_ui_adjust_if_pawn->value() = data.decoupled_pitch_ui_adjust_if_pawn;
 }
 
 void VR::save_camera(int index) {
@@ -1818,6 +1823,7 @@ void VR::save_camera(int index) {
     data.world_scale = m_world_scale->value();
     data.decoupled_pitch = m_decoupled_pitch->value();
     data.decoupled_pitch_ui_adjust = m_decoupled_pitch_ui_adjust->value();
+    data.decoupled_pitch_ui_adjust_if_pawn = m_decoupled_pitch_ui_adjust_if_pawn->value();
 
     save_cameras();
 }
@@ -1839,6 +1845,7 @@ void VR::save_cameras() try {
         cfg.set<float>(std::format("world_scale{}", i), m_camera_datas[i].world_scale);
         cfg.set<bool>(std::format("decoupled_pitch{}", i), m_camera_datas[i].decoupled_pitch);
         cfg.set<bool>(std::format("decoupled_pitch_ui_adjust{}", i), m_camera_datas[i].decoupled_pitch_ui_adjust);
+        cfg.set<bool>(std::format("decoupled_pitch_ui_adjust_if_pawn{}", i), m_camera_datas[i].decoupled_pitch_ui_adjust_if_pawn);
     }
 
     cfg.save(cameras_txt.string());
@@ -2545,7 +2552,8 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
         ImGui::SetNextItemOpen(true, ImGuiCond_::ImGuiCond_Once);
         if (ImGui::TreeNode("Decoupled Pitch")) {
             m_decoupled_pitch->draw("Enabled");
-            m_decoupled_pitch_ui_adjust->draw("Auto Adjust UI");
+            m_decoupled_pitch_ui_adjust->draw("Always Auto Adjust UI");
+            m_decoupled_pitch_ui_adjust_if_pawn->draw("Auto Adjust UI Only When Pawn Detected");
 
             ImGui::TreePop();
         }

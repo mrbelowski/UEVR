@@ -5,7 +5,9 @@
 #include <memory>
 #include <string>
 
+#include <sdk/APlayerController.hpp>
 #include <sdk/Math.hpp>
+#include <sdk/UGameplayStatics.hpp>
 
 #include "vr/runtimes/OpenVR.hpp"
 #include "vr/runtimes/OpenXR.hpp"
@@ -455,7 +457,23 @@ public:
     }
 
     bool is_decoupled_pitch_ui_adjust_enabled() const {
-        return m_decoupled_pitch_ui_adjust->value();
+        if (m_decoupled_pitch_ui_adjust->value()) {
+            return true;
+        }
+        // auto adjust the UI pitch only if we find a pawn
+        if (m_decoupled_pitch_ui_adjust_if_pawn->value()) {
+            auto const engine = sdk::UGameEngine::get();
+            if (engine != nullptr) {
+                auto const world = engine->get_world();
+                if (world != nullptr) {
+                    auto const player_controller = sdk::UGameplayStatics::get()->get_player_controller(world, 0);
+                    if (player_controller != nullptr) {
+                         return player_controller->get_acknowledged_pawn() != nullptr;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     void set_decoupled_pitch(bool value) {
@@ -880,6 +898,7 @@ private:
     const ModToggle::Ptr m_enable_depth{ ModToggle::create(generate_name("EnableDepth"), false) };
     const ModToggle::Ptr m_decoupled_pitch{ ModToggle::create(generate_name("DecoupledPitch"), false) };
     const ModToggle::Ptr m_decoupled_pitch_ui_adjust{ ModToggle::create(generate_name("DecoupledPitchUIAdjust"), true) };
+    const ModToggle::Ptr m_decoupled_pitch_ui_adjust_if_pawn{ ModToggle::create(generate_name("DecoupledPitchUIAdjustIfPawn"), true) };
     const ModToggle::Ptr m_load_blueprint_code{ ModToggle::create(generate_name("LoadBlueprintCode"), false, true) };
     const ModToggle::Ptr m_2d_screen_mode{ ModToggle::create(generate_name("2DScreenMode"), false) };
     const ModToggle::Ptr m_roomscale_movement{ ModToggle::create(generate_name("RoomscaleMovement"), false) };
@@ -995,6 +1014,7 @@ private:
         float world_scale{1.0f};
         bool decoupled_pitch{false};
         bool decoupled_pitch_ui_adjust{true};
+        bool decoupled_pitch_ui_adjust_if_pawn{false};
     };
     std::array<CameraData, 3> m_camera_datas{};
     void save_cameras();
@@ -1021,6 +1041,7 @@ private:
         *m_enable_depth,
         *m_decoupled_pitch,
         *m_decoupled_pitch_ui_adjust,
+        *m_decoupled_pitch_ui_adjust_if_pawn,
         *m_load_blueprint_code,
         *m_2d_screen_mode,
         *m_roomscale_movement,
