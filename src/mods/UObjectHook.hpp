@@ -52,12 +52,6 @@ public:
         m_fixed_visibilities = false;
     }
 
-    // where we've attached our controllers to one or more objects, this indicates that we've been unable to find
-    // any of those objects on the current tick
-    bool is_missing_all_controller_attachments() { 
-        return m_missing_all_controller_attachments;
-    }
-
 protected:
     std::string_view get_name() const override { return "UObjectHook"; };
     bool is_advanced_mod() const override { return true; }
@@ -469,7 +463,6 @@ private:
     ModKey::Ptr m_keybind_toggle_uobject_hook{ModKey::create(generate_name("ToggleUObjectHookKey"))};
     bool m_uobject_hook_disabled{false};
     bool m_fixed_visibilities{false};
-    bool m_missing_all_controller_attachments{false};
 
     ValueList m_options{
         *m_enabled_at_startup,

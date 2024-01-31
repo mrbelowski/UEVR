@@ -1235,7 +1235,6 @@ void UObjectHook::update_persistent_states() {
 
     // Motion controller states
     if (!m_persistent_states.empty()) {
-        m_missing_all_controller_attachments = true;
         for (const auto& state : m_persistent_states) {
             if (state == nullptr) {
                 continue;
@@ -1274,11 +1273,7 @@ void UObjectHook::update_persistent_states() {
             }
 
             state->last_object = obj.as<sdk::USceneComponent*>();
-            m_missing_all_controller_attachments = false;
         }
-        // if we're expecting a motion controller attachment but we can't find it, assume we don't want to control the aim with the motion controller.
-    } else {
-        m_missing_all_controller_attachments = false;
     }
 
     // Persistent properties
