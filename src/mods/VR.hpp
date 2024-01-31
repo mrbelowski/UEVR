@@ -19,6 +19,7 @@
 #include "vr/CVarManager.hpp"
 
 #include "Mod.hpp"
+#include "UObjectHook.hpp"
 
 #undef max
 #include <tracy/Tracy.hpp>
@@ -52,6 +53,11 @@ public:
         RIGHT_JOYSTICK,
         GESTURE_HEAD,
         GESTURE_HEAD_RIGHT,
+    };
+
+    enum L3_R3_LONG_PRESS_MODE : int32_t {
+        TOGGLE_AIM_MODE,
+        TOGGLE_DISABLE_UOBJECT_HOOK
     };
 
     static const inline std::string s_action_pose = "/actions/default/in/Pose";
@@ -461,7 +467,7 @@ public:
     }
 
     AimMethod get_aim_method() const {
-        if (m_aim_temp_disabled) {
+        if (m_aim_temp_disabled || UObjectHook::get()->is_uobject_hook_disabled()) {
             return AimMethod::GAME;
         }
 
@@ -541,16 +547,18 @@ public:
     }
     
     bool is_any_aim_method_active() const {
-        return m_aim_method->value() > AimMethod::GAME && !m_aim_temp_disabled;
+        return m_aim_method->value() > AimMethod::GAME && !m_aim_temp_disabled && !UObjectHook::get()->is_uobject_hook_disabled();
     }
 
     bool is_headlocked_aim_enabled() const {
-        return m_aim_method->value() == AimMethod::HEAD && !m_aim_temp_disabled;
+        return m_aim_method->value() == AimMethod::HEAD && !m_aim_temp_disabled && !UObjectHook::get()->is_uobject_hook_disabled();
     }
 
     bool is_controller_aim_enabled() const {
         const auto value = m_aim_method->value();
-        return !m_aim_temp_disabled && (value == AimMethod::LEFT_CONTROLLER || value == AimMethod::RIGHT_CONTROLLER || value == AimMethod::TWO_HANDED_LEFT || value == AimMethod::TWO_HANDED_RIGHT);
+        return !m_aim_temp_disabled &&
+               !UObjectHook::get()->is_uobject_hook_disabled() &&
+            (value == AimMethod::LEFT_CONTROLLER || value == AimMethod::RIGHT_CONTROLLER || value == AimMethod::TWO_HANDED_LEFT || value == AimMethod::TWO_HANDED_RIGHT);
     }
 
     bool is_controller_movement_enabled() const {
@@ -597,7 +605,7 @@ public:
     }
 
     bool is_roomscale_enabled() const {
-        return m_roomscale_movement->value() && !m_aim_temp_disabled;
+        return m_roomscale_movement->value() && !m_aim_temp_disabled && !UObjectHook::get()->is_uobject_hook_disabled();
     }
 
     bool is_dpad_shifting_enabled() const {
@@ -844,6 +852,11 @@ private:
         "Two Handed (Left)",
     };
 
+    static const inline std::vector<std::string> s_l3_r3_long_press_mode_names{
+        "Toggle Aim Mode",
+        "Toggle UObject Hook Disabled"
+    };
+
     static const inline std::vector<std::string> s_dpad_method_names {
         "Right Thumbrest + Left Joystick",
         "Left Thumbrest + Right Joystick",
@@ -888,6 +901,7 @@ private:
     // Aim method and movement orientation are not the same thing, but they can both have the same options
     const ModCombo::Ptr m_aim_method{ ModCombo::create(generate_name("AimMethod"), s_aim_method_names, AimMethod::GAME) };
     const ModCombo::Ptr m_movement_orientation{ ModCombo::create(generate_name("MovementOrientation"), s_aim_method_names, AimMethod::GAME) };
+    const ModCombo::Ptr m_l3_r3_long_press_mode{ ModCombo::create(generate_name("L3R3LongPressMode"), s_l3_r3_long_press_mode_names, L3_R3_LONG_PRESS_MODE::TOGGLE_AIM_MODE) };
     AimMethod m_previous_aim_method{ AimMethod::GAME };
     const ModToggle::Ptr m_aim_use_pawn_control_rotation{ ModToggle::create(generate_name("AimUsePawnControlRotation"), false) };
     const ModToggle::Ptr m_aim_modify_player_control_rotation{ ModToggle::create(generate_name("AimModifyPlayerControlRotation"), false) };
@@ -1016,6 +1030,7 @@ private:
         *m_snapturn_angle,
         *m_controller_pitch_offset,
         *m_aim_method,
+        *m_l3_r3_long_press_mode,
         *m_movement_orientation,
         *m_aim_use_pawn_control_rotation,
         *m_aim_modify_player_control_rotation,
