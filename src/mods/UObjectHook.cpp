@@ -1440,7 +1440,7 @@ sdk::UObject* UObjectHook::StatePath::resolve_base_object() const {
         if (player_controller == nullptr) {
             return nullptr;
         }
-        
+
         return player_controller->get_acknowledged_pawn();
         break;
     }
@@ -1457,7 +1457,7 @@ sdk::UObject* UObjectHook::StatePath::resolve_base_object() const {
     }
 
     case "Camera Manager"_fnv:
-    {      
+    {
         auto world = engine->get_world();
         if (world == nullptr) {
             return nullptr;
@@ -1468,7 +1468,7 @@ sdk::UObject* UObjectHook::StatePath::resolve_base_object() const {
         if (player_controller == nullptr) {
             return nullptr;
         }
-        
+
         return player_controller->get_player_camera_manager();
         break;
     }
@@ -1527,17 +1527,53 @@ UObjectHook::ResolvedObject UObjectHook::StatePath::resolve() const {
                 return nullptr;
             }
 
+            bool found = false;
+            auto original_name_from_profile = *next_it;
             for (auto comp : components) {
-                const auto comp_name = comp->get_class()->get_fname().to_string() + L" " + comp->get_fname().to_string();
+                const auto comp_name = utility::narrow(comp->get_class()->get_fname().to_string() + L" " + comp->get_fname().to_string());
 
-                if (utility::narrow(comp_name) == *next_it) {
+                // check for an exact match, or a cached match
+                if (comp_name == original_name_from_profile ||
+                        (cached_approximate_matches.find(original_name_from_profile) != cached_approximate_matches.end() &&
+                         cached_approximate_matches[original_name_from_profile] == comp_name)) {
                     previous_data = comp;
                     previous_data_desc = comp->get_class();
                     ++it;
+                    found = true;
                     break;
                 }
             }
 
+            // no exact match to the property name so check if it could match to anything ignoring numbers in the path
+            if (!found && std::any_of(original_name_from_profile.begin(), original_name_from_profile.end(), ::isdigit)) {
+
+                // copy the JSON object name and erase characters which are digits
+                auto modified_name_from_profile = original_name_from_profile;
+                modified_name_from_profile.erase(std::remove_if(std::begin(modified_name_from_profile), std::end(modified_name_from_profile),
+                                                 [](auto ch) { return std::isdigit(ch); }), modified_name_from_profile.end());
+
+                for (auto comp : components) {
+                    // copy the object's name and erase characters which are digits
+                    auto original_name_from_game = utility::narrow(comp->get_class()->get_fname().to_string() + L" " + comp->get_fname().to_string());
+                    auto modified_name_from_game = original_name_from_game;
+                    modified_name_from_game.erase(std::remove_if(std::begin(modified_name_from_game), std::end(modified_name_from_game),
+                                                  [](auto ch) { return std::isdigit(ch); }), modified_name_from_game.end());
+
+                    // if the mangled object from the JSON matches the mangled name from the game, we have our match
+                    if (modified_name_from_game == modified_name_from_profile) {
+                        previous_data = comp;
+                        previous_data_desc = comp->get_class();
+
+                        // Cache the match (actual JSON object name -> actual game object name) so we don't have to repeat this hack on
+                        // every tick
+                        cached_approximate_matches[original_name_from_profile] = original_name_from_game;
+                        SPDLOG_INFO("[UObjectHook] Fuzzy matched game object [{}] to profile property [{}] on text [{}], cached lookups now contains {} items",
+                            original_name_from_game, original_name_from_profile, modified_name_from_profile, cached_approximate_matches.size());
+                        ++it;
+                        break;
+                    }
+                }
+            }
             break;
         }
         case "Properties"_fnv:
@@ -1632,6 +1668,7 @@ UObjectHook::ResolvedObject UObjectHook::StatePath::resolve() const {
                 }
 
                 bool found = false;
+                auto original_name_from_profile = *prop_it;
 
                 // Now look for the object in the array
                 for (auto obj : arr) {
@@ -1639,15 +1676,54 @@ UObjectHook::ResolvedObject UObjectHook::StatePath::resolve() const {
                         continue;
                     }
 
-                    const auto obj_name = obj->get_class()->get_fname().to_string() + L" " + obj->get_fname().to_string();
+                    const auto obj_name = utility::narrow(obj->get_class()->get_fname().to_string() + L" " + obj->get_fname().to_string());
 
-                    if (utility::narrow(obj_name) == *prop_it) {
+                    // check for an exact match, or a cached match
+                    if (obj_name == original_name_from_profile ||
+                            (cached_approximate_matches.find(original_name_from_profile) != cached_approximate_matches.end() &&
+                             cached_approximate_matches[original_name_from_profile] == obj_name)) {
                         found = true;
                         previous_data = obj;
                         previous_data_desc = obj->get_class();
                         ++it;
                         ++it;
                         break;
+                    }
+                }
+
+                // no exact match or cached approximate match to the property name so check if it matches to anything ignoring numbers in the path
+                if (!found && std::any_of(original_name_from_profile.begin(), original_name_from_profile.end(), ::isdigit)) {
+
+                    // copy the JSON property name and erase characters which are digits
+                    auto modified_name_from_profile = original_name_from_profile;
+                    modified_name_from_profile.erase(std::remove_if(std::begin(modified_name_from_profile), std::end(modified_name_from_profile),
+                                                    [](auto ch) { return std::isdigit(ch); }), modified_name_from_profile.end());
+
+                    for (auto obj : arr) {
+                        if (obj == nullptr) {
+                            continue;
+                        }
+
+                        // copy the object's property name and erase characters which are digits
+                        auto original_name_from_game = utility::narrow(obj->get_class()->get_fname().to_string() + L" " + obj->get_fname().to_string());
+                        auto modified_name_from_game = original_name_from_game;
+                        modified_name_from_game.erase(std::remove_if(std::begin(modified_name_from_game), std::end(modified_name_from_game),
+                                                      [](auto ch) { return std::isdigit(ch); }), modified_name_from_game.end());
+
+                        // if the mangled propname from the JSON matches the mangled name from the game, we have our match
+                        if (modified_name_from_profile == modified_name_from_game) {
+                            found = true;
+                            previous_data = obj;
+                            previous_data_desc = obj->get_class();
+
+                            // Cache the match (actual JSON prop name -> actual game prop name) so we don't have to repeat this hack on every tick
+                            cached_approximate_matches[original_name_from_profile] = original_name_from_game;
+                            SPDLOG_INFO("[UObjectHook] Fuzzy matched game property [{}] to profile property [{}] on text [{}], cached lookups now contains {} items",
+                                original_name_from_game, original_name_from_profile, modified_name_from_profile, cached_approximate_matches.size());
+                            ++it;
+                            ++it;
+                            break;
+                        }
                     }
                 }
 
@@ -2555,7 +2631,6 @@ std::optional<UObjectHook::StatePath> UObjectHook::try_get_path(sdk::UObject* ta
             }
         }
     }
-
     return std::nullopt;
 }
 
