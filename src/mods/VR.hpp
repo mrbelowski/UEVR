@@ -812,7 +812,7 @@ private:
     const ModToggle::Ptr m_enable_depth{ ModToggle::create(generate_name("EnableDepth"), false) };
     const ModToggle::Ptr m_decoupled_pitch{ ModToggle::create(generate_name("DecoupledPitch"), false) };
     const ModToggle::Ptr m_decoupled_pitch_ui_adjust{ ModToggle::create(generate_name("DecoupledPitchUIAdjust"), true) };
-    const ModToggle::Ptr m_decoupled_pitch_ui_adjust_if_pawn{ ModToggle::create(generate_name("DecoupledPitchUIAdjustIfPawn"), true) };
+    const ModToggle::Ptr m_decoupled_pitch_ui_adjust_if_pawn{ ModToggle::create(generate_name("DecoupledPitchUIAdjustIfPawn"), false) };
     const ModToggle::Ptr m_load_blueprint_code{ ModToggle::create(generate_name("LoadBlueprintCode"), false, true) };
     const ModToggle::Ptr m_2d_screen_mode{ ModToggle::create(generate_name("2DScreenMode"), false) };
     const ModToggle::Ptr m_roomscale_movement{ ModToggle::create(generate_name("RoomscaleMovement"), false) };
