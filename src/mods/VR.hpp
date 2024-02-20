@@ -62,6 +62,18 @@ public:
         TOGGLE_DISABLE_UOBJECT_HOOK
     };
 
+    enum HORIZONTAL_PROJECTION_OVERRIDE : int32_t {
+        HORIZONTAL_DEFAULT,
+        HORIZONTAL_SYMMETRIC,
+        HORIZONTAL_MIRROR
+    };
+
+    enum VERTICAL_PROJECTION_OVERRIDE : int32_t {
+        VERTICAL_DEFAULT,
+        VERTICAL_SYMMETRIC,
+        VERTICAL_MATCHED
+    };
+
     static const inline std::string s_action_pose = "/actions/default/in/Pose";
     static const inline std::string s_action_grip_pose = "/actions/default/in/GripPose";
     static const inline std::string s_action_trigger = "/actions/default/in/Trigger";
@@ -109,6 +121,11 @@ public:
             {"Debug", true},
         };
     }
+
+    // texture bounds to tell OpenVR which parts of the submitted texture to render (default - use the whole texture).
+    // Will be modified to accommodate forced symmetrical eye projection
+    vr::VRTextureBounds_t m_right_bounds{0.0f, 0.0f, 1.0f, 1.0f};
+    vr::VRTextureBounds_t m_left_bounds{0.0f, 0.0f, 1.0f, 1.0f};
 
     void on_config_load(const utility::Config& cfg, bool set_defaults) override;
     void on_config_save(utility::Config& cfg) override;
@@ -673,6 +690,18 @@ public:
         return m_extreme_compat_mode->value();
     }
 
+    auto get_horizontal_projection_override() const {
+        return m_horizontal_projection_override->value();
+    }
+
+    auto get_vertical_projection_override() const {
+        return m_vertical_projection_override->value();
+    }
+
+    bool should_grow_rectangle_for_projection_cropping() const {
+        return m_grow_rectangle_for_projection_cropping->value();
+    }
+
 private:
     Vector4f get_position_unsafe(uint32_t index) const;
     Vector4f get_velocity_unsafe(uint32_t index) const;
@@ -754,9 +783,6 @@ private:
 
     std::vector<int32_t> m_controllers{};
     std::unordered_set<int32_t> m_controllers_set{};
-
-    vr::VRTextureBounds_t m_right_bounds{ 0.0f, 0.0f, 1.0f, 1.0f };
-    vr::VRTextureBounds_t m_left_bounds{ 0.0f, 0.0f, 1.0f, 1.0f };
 
     glm::vec3 m_overlay_rotation{-1.550f, 0.0f, -1.330f};
     glm::vec4 m_overlay_position{0.0f, 0.06f, -0.07f, 1.0f};
@@ -886,6 +912,18 @@ private:
         "Gesture (Head) + Right Joystick",
     };
 
+    static const inline std::vector<std::string> s_horizontal_projection_override_names{
+        "Raw / default",
+        "Symmetrical",
+        "Mirrored",
+    };
+
+    static const inline std::vector<std::string> s_vertical_projection_override_names{
+        "Raw / default",
+        "Symmetrical",
+        "Matched",
+    };
+
     const ModCombo::Ptr m_rendering_method{ ModCombo::create(generate_name("RenderingMethod"), s_rendering_method_names) };
     const ModCombo::Ptr m_synced_afr_method{ ModCombo::create(generate_name("SyncedSequentialMethod"), s_synced_afr_method_names, 1) };
     const ModToggle::Ptr m_extreme_compat_mode{ ModToggle::create(generate_name("ExtremeCompatibilityMode"), false, true) };
@@ -904,6 +942,9 @@ private:
     const ModToggle::Ptr m_2d_screen_mode{ ModToggle::create(generate_name("2DScreenMode"), false) };
     const ModToggle::Ptr m_roomscale_movement{ ModToggle::create(generate_name("RoomscaleMovement"), false) };
     const ModToggle::Ptr m_swap_controllers{ ModToggle::create(generate_name("SwapControllerInputs"), false) };
+    const ModCombo::Ptr m_horizontal_projection_override{ModCombo::create(generate_name("HorizontalProjectionOverride"), s_horizontal_projection_override_names)};
+    const ModCombo::Ptr m_vertical_projection_override{ModCombo::create(generate_name("VerticalProjectionOverride"), s_vertical_projection_override_names)};
+    const ModToggle::Ptr m_grow_rectangle_for_projection_cropping{ModToggle::create(generate_name("GrowRectangleForProjectionCropping"), false)};
 
     // Snap turn settings and globals
     void gamepad_snapturn(XINPUT_STATE& state);
@@ -1049,6 +1090,9 @@ private:
         *m_2d_screen_mode,
         *m_roomscale_movement,
         *m_swap_controllers,
+        *m_horizontal_projection_override,
+        *m_vertical_projection_override,
+        *m_grow_rectangle_for_projection_cropping,
         *m_snapturn,
         *m_snapturn_joystick_deadzone,
         *m_snapturn_angle,
