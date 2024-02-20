@@ -5,7 +5,9 @@
 #include <memory>
 #include <string>
 
+#include <sdk/APlayerController.hpp>
 #include <sdk/Math.hpp>
+#include <sdk/UGameplayStatics.hpp>
 
 #include "vr/runtimes/OpenVR.hpp"
 #include "vr/runtimes/OpenXR.hpp"
@@ -19,6 +21,7 @@
 #include "vr/CVarManager.hpp"
 
 #include "Mod.hpp"
+#include "UObjectHook.hpp"
 
 #undef max
 #include <tracy/Tracy.hpp>
@@ -52,6 +55,11 @@ public:
         RIGHT_JOYSTICK,
         GESTURE_HEAD,
         GESTURE_HEAD_RIGHT,
+    };
+
+    enum L3_R3_LONG_PRESS_MODE : int32_t {
+        TOGGLE_AIM_MODE,
+        TOGGLE_DISABLE_UOBJECT_HOOK
     };
 
     static const inline std::string s_action_pose = "/actions/default/in/Pose";
@@ -444,7 +452,23 @@ public:
     }
 
     bool is_decoupled_pitch_ui_adjust_enabled() const {
-        return m_decoupled_pitch_ui_adjust->value();
+        if (m_decoupled_pitch_ui_adjust->value()) {
+            return true;
+        }
+        // auto adjust the UI pitch only if we find a pawn
+        if (m_decoupled_pitch_ui_adjust_if_pawn->value()) {
+            auto const engine = sdk::UGameEngine::get();
+            if (engine != nullptr) {
+                auto const world = engine->get_world();
+                if (world != nullptr) {
+                    auto const player_controller = sdk::UGameplayStatics::get()->get_player_controller(world, 0);
+                    if (player_controller != nullptr) {
+                         return player_controller->get_acknowledged_pawn() != nullptr;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     void set_decoupled_pitch(bool value) {
@@ -460,7 +484,7 @@ public:
     }
 
     AimMethod get_aim_method() const {
-        if (m_aim_temp_disabled) {
+        if (m_aim_temp_disabled || UObjectHook::get()->is_uobject_hook_disabled()) {
             return AimMethod::GAME;
         }
 
@@ -548,16 +572,18 @@ public:
     }
     
     bool is_any_aim_method_active() const {
-        return m_aim_method->value() > AimMethod::GAME && !m_aim_temp_disabled;
+        return m_aim_method->value() > AimMethod::GAME && !m_aim_temp_disabled && !UObjectHook::get()->is_uobject_hook_disabled();
     }
 
     bool is_headlocked_aim_enabled() const {
-        return m_aim_method->value() == AimMethod::HEAD && !m_aim_temp_disabled;
+        return m_aim_method->value() == AimMethod::HEAD && !m_aim_temp_disabled && !UObjectHook::get()->is_uobject_hook_disabled();
     }
 
     bool is_controller_aim_enabled() const {
         const auto value = m_aim_method->value();
-        return !m_aim_temp_disabled && (value == AimMethod::LEFT_CONTROLLER || value == AimMethod::RIGHT_CONTROLLER || value == AimMethod::TWO_HANDED_LEFT || value == AimMethod::TWO_HANDED_RIGHT);
+        return !m_aim_temp_disabled &&
+               !UObjectHook::get()->is_uobject_hook_disabled() &&
+            (value == AimMethod::LEFT_CONTROLLER || value == AimMethod::RIGHT_CONTROLLER || value == AimMethod::TWO_HANDED_LEFT || value == AimMethod::TWO_HANDED_RIGHT);
     }
 
     bool is_controller_movement_enabled() const {
@@ -608,7 +634,7 @@ public:
     }
 
     bool is_roomscale_enabled() const {
-        return m_roomscale_movement->value() && !m_aim_temp_disabled;
+        return m_roomscale_movement->value() && !m_aim_temp_disabled && !UObjectHook::get()->is_uobject_hook_disabled();
     }
 
     bool is_dpad_shifting_enabled() const {
@@ -846,6 +872,11 @@ private:
         "Two Handed (Left)",
     };
 
+    static const inline std::vector<std::string> s_l3_r3_long_press_mode_names{
+        "Toggle Aim Mode",
+        "Toggle UObject Hook Disabled"
+    };
+
     static const inline std::vector<std::string> s_dpad_method_names {
         "Right Thumbrest + Left Joystick",
         "Left Thumbrest + Right Joystick",
@@ -868,6 +899,7 @@ private:
     const ModToggle::Ptr m_enable_depth{ ModToggle::create(generate_name("EnableDepth"), false) };
     const ModToggle::Ptr m_decoupled_pitch{ ModToggle::create(generate_name("DecoupledPitch"), false) };
     const ModToggle::Ptr m_decoupled_pitch_ui_adjust{ ModToggle::create(generate_name("DecoupledPitchUIAdjust"), true) };
+    const ModToggle::Ptr m_decoupled_pitch_ui_adjust_if_pawn{ ModToggle::create(generate_name("DecoupledPitchUIAdjustIfPawn"), false) };
     const ModToggle::Ptr m_load_blueprint_code{ ModToggle::create(generate_name("LoadBlueprintCode"), false, true) };
     const ModToggle::Ptr m_2d_screen_mode{ ModToggle::create(generate_name("2DScreenMode"), false) };
     const ModToggle::Ptr m_roomscale_movement{ ModToggle::create(generate_name("RoomscaleMovement"), false) };
@@ -889,6 +921,7 @@ private:
     // Aim method and movement orientation are not the same thing, but they can both have the same options
     const ModCombo::Ptr m_aim_method{ ModCombo::create(generate_name("AimMethod"), s_aim_method_names, AimMethod::GAME) };
     const ModCombo::Ptr m_movement_orientation{ ModCombo::create(generate_name("MovementOrientation"), s_aim_method_names, AimMethod::GAME) };
+    const ModCombo::Ptr m_l3_r3_long_press_mode{ ModCombo::create(generate_name("L3R3LongPressMode"), s_l3_r3_long_press_mode_names, L3_R3_LONG_PRESS_MODE::TOGGLE_AIM_MODE) };
     AimMethod m_previous_aim_method{ AimMethod::GAME };
     const ModToggle::Ptr m_aim_use_pawn_control_rotation{ ModToggle::create(generate_name("AimUsePawnControlRotation"), false) };
     const ModToggle::Ptr m_aim_modify_player_control_rotation{ ModToggle::create(generate_name("AimModifyPlayerControlRotation"), false) };
@@ -985,6 +1018,7 @@ private:
         float world_scale{1.0f};
         bool decoupled_pitch{false};
         bool decoupled_pitch_ui_adjust{true};
+        bool decoupled_pitch_ui_adjust_if_pawn{false};
     };
     std::array<CameraData, 3> m_camera_datas{};
     void save_cameras();
@@ -1010,6 +1044,7 @@ private:
         *m_enable_depth,
         *m_decoupled_pitch,
         *m_decoupled_pitch_ui_adjust,
+        *m_decoupled_pitch_ui_adjust_if_pawn,
         *m_load_blueprint_code,
         *m_2d_screen_mode,
         *m_roomscale_movement,
@@ -1019,6 +1054,7 @@ private:
         *m_snapturn_angle,
         *m_controller_pitch_offset,
         *m_aim_method,
+        *m_l3_r3_long_press_mode,
         *m_movement_orientation,
         *m_aim_use_pawn_control_rotation,
         *m_aim_modify_player_control_rotation,

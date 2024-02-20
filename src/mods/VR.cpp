@@ -24,6 +24,7 @@
 #include "utility/Logging.hpp"
 
 #include "VR.hpp"
+#include "UObjectHook.hpp"
 
 std::shared_ptr<VR>& VR::get() {
     static std::shared_ptr<VR> instance = std::make_shared<VR>();
@@ -978,7 +979,7 @@ void VR::on_xinput_get_state(uint32_t* retval, uint32_t user_index, XINPUT_STATE
     }
 
     // Determine if snapturn should be run on frame
-    if (m_snapturn->value()) {
+    if (m_snapturn->value() && !UObjectHook::get()->is_uobject_hook_disabled()) {
         DPadMethod dpad_method = get_dpad_method();
         const auto snapturn_deadzone = get_snapturn_js_deadzone();
         float stick_axis{};
@@ -1773,6 +1774,10 @@ void VR::load_cameras() try {
             if (auto decoupled_pitch_ui_adjust = cfg.get<bool>(std::format("decoupled_pitch_ui_adjust{}", i))) {
                 data.decoupled_pitch_ui_adjust = *decoupled_pitch_ui_adjust;
             }
+
+            if (auto decoupled_pitch_ui_adjust_if_pawn = cfg.get<bool>(std::format("decoupled_pitch_ui_adjust_if_pawn{}", i))) {
+                data.decoupled_pitch_ui_adjust_if_pawn = *decoupled_pitch_ui_adjust_if_pawn;
+            }
         }
     }
 } catch(...) {
@@ -1794,6 +1799,7 @@ void VR::load_camera(int index) {
     m_world_scale->value() = data.world_scale;
     m_decoupled_pitch->value() = data.decoupled_pitch;
     m_decoupled_pitch_ui_adjust->value() = data.decoupled_pitch_ui_adjust;
+    m_decoupled_pitch_ui_adjust_if_pawn->value() = data.decoupled_pitch_ui_adjust_if_pawn;
 }
 
 void VR::save_camera(int index) {
@@ -1814,6 +1820,7 @@ void VR::save_camera(int index) {
     data.world_scale = m_world_scale->value();
     data.decoupled_pitch = m_decoupled_pitch->value();
     data.decoupled_pitch_ui_adjust = m_decoupled_pitch_ui_adjust->value();
+    data.decoupled_pitch_ui_adjust_if_pawn = m_decoupled_pitch_ui_adjust_if_pawn->value();
 
     save_cameras();
 }
@@ -1835,6 +1842,7 @@ void VR::save_cameras() try {
         cfg.set<float>(std::format("world_scale{}", i), m_camera_datas[i].world_scale);
         cfg.set<bool>(std::format("decoupled_pitch{}", i), m_camera_datas[i].decoupled_pitch);
         cfg.set<bool>(std::format("decoupled_pitch_ui_adjust{}", i), m_camera_datas[i].decoupled_pitch_ui_adjust);
+        cfg.set<bool>(std::format("decoupled_pitch_ui_adjust_if_pawn{}", i), m_camera_datas[i].decoupled_pitch_ui_adjust_if_pawn);
     }
 
     cfg.save(cameras_txt.string());
@@ -1916,6 +1924,7 @@ void VR::on_frame() {
     }
 
     if (is_allowed_draw_window && m_xinput_context.headlocked_begin_held && !FrameworkConfig::get()->is_l3_r3_long_press()) {
+        bool long_press_is_uobject_hook_toggle = m_l3_r3_long_press_mode->value() == VR::L3_R3_LONG_PRESS_MODE::TOGGLE_DISABLE_UOBJECT_HOOK;
         const auto rt_size = g_framework->get_rt_size();
 
         ImGui::Begin("AimMethod Notification", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav);
@@ -1923,17 +1932,21 @@ void VR::on_frame() {
         ImGui::Text("Continue holding down L3 + R3 to toggle aim method");
 
         if (std::chrono::steady_clock::now() - m_xinput_context.headlocked_begin >= std::chrono::seconds(1)) {
-            if (m_aim_method->value() == VR::AimMethod::GAME) {
-                m_aim_method->value() = m_previous_aim_method;
+            if (long_press_is_uobject_hook_toggle) {
+                UObjectHook::get()->toggle_uobject_hook_disabled();
             } else {
-                m_aim_method->value() = VR::AimMethod::GAME; // turns it off
+                if (m_aim_method->value() == VR::AimMethod::GAME) {
+                    m_aim_method->value() = m_previous_aim_method;
+                } else {
+                    m_aim_method->value() = VR::AimMethod::GAME; // turns it off
+                }
             }
-
             m_xinput_context.headlocked_begin_held = false;
-        } else {
+        } else if (!long_press_is_uobject_hook_toggle) {
             if (m_aim_method->value() != VR::AimMethod::GAME) {
                 m_previous_aim_method = (VR::AimMethod)m_aim_method->value();
-            } else if (m_previous_aim_method == VR::AimMethod::GAME) {
+            }
+            else if (m_previous_aim_method == VR::AimMethod::GAME) {
                 m_previous_aim_method = VR::AimMethod::HEAD; // so it will at least be something
             }
         }
@@ -2408,6 +2421,9 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
 
             m_aim_multiplayer_support->draw("Multiplayer Support");
 
+            ImGui::TextWrapped("L3 + R3 Long Press Mode");
+            m_l3_r3_long_press_mode->draw("Type");
+
             ImGui::TreePop();
         }
 
@@ -2537,7 +2553,8 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
         ImGui::SetNextItemOpen(true, ImGuiCond_::ImGuiCond_Once);
         if (ImGui::TreeNode("Decoupled Pitch")) {
             m_decoupled_pitch->draw("Enabled");
-            m_decoupled_pitch_ui_adjust->draw("Auto Adjust UI");
+            m_decoupled_pitch_ui_adjust->draw("Always Auto Adjust UI");
+            m_decoupled_pitch_ui_adjust_if_pawn->draw("Auto Adjust UI Only When Pawn Detected");
 
             ImGui::TreePop();
         }
@@ -3200,7 +3217,7 @@ void VR::recenter_horizon() {
 }
 
 void VR::gamepad_snapturn(XINPUT_STATE& state) {
-    if (!m_snapturn->value()) {
+    if (!m_snapturn->value() || UObjectHook::get()->is_uobject_hook_disabled()) {
         return;
     }
 
@@ -3227,7 +3244,7 @@ void VR::gamepad_snapturn(XINPUT_STATE& state) {
 }
 
 void VR::process_snapturn() {
-    if (!m_snapturn_on_frame) {
+    if (!m_snapturn_on_frame || UObjectHook::get()->is_uobject_hook_disabled()) {
         return;
     }
 
