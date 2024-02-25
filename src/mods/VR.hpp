@@ -444,7 +444,7 @@ public:
         return m_lowest_xinput_user_index;
     }
 
-    auto& get_render_target_pool_hook() {
+    auto& get_render_target_pool_hook() const {
         return m_render_target_pool_hook;
     }
 
@@ -702,6 +702,14 @@ public:
         return m_grow_rectangle_for_projection_cropping->value();
     }
 
+    vrmod::D3D11Component& d3d11() {
+        return m_d3d11;
+    }
+
+    vrmod::D3D12Component& d3d12() {
+        return m_d3d12;
+    }
+
 private:
     Vector4f get_position_unsafe(uint32_t index) const;
     Vector4f get_velocity_unsafe(uint32_t index) const;
@@ -934,7 +942,7 @@ private:
     const ModToggle::Ptr m_disable_instance_culling{ ModToggle::create(generate_name("DisableInstanceCulling"), true, true) };
     const ModToggle::Ptr m_desktop_fix{ ModToggle::create(generate_name("DesktopRecordingFix_V2"), true) };
     const ModToggle::Ptr m_enable_gui{ ModToggle::create(generate_name("EnableGUI"), true) };
-    const ModToggle::Ptr m_enable_depth{ ModToggle::create(generate_name("EnableDepth"), false) };
+    const ModToggle::Ptr m_enable_depth{ ModToggle::create(generate_name("PassDepthToRuntime"), false, true) };
     const ModToggle::Ptr m_decoupled_pitch{ ModToggle::create(generate_name("DecoupledPitch"), false) };
     const ModToggle::Ptr m_decoupled_pitch_ui_adjust{ ModToggle::create(generate_name("DecoupledPitchUIAdjust"), true) };
     const ModToggle::Ptr m_decoupled_pitch_ui_adjust_if_pawn{ ModToggle::create(generate_name("DecoupledPitchUIAdjustIfPawn"), false) };
