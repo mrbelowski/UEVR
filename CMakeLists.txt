@@ -30,6 +30,12 @@ endif()
  
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
 
+# Enable PDB generation in release mode, but without the extra crap that RelWithDebInfo adds
+add_compile_options("$<$<CONFIG:Release>:/Zi>")
+add_link_options("$<$<CONFIG:Release>:/DEBUG>")
+add_link_options("$<$<CONFIG:Release>:/OPT:REF>")
+add_link_options("$<$<CONFIG:Release>:/OPT:ICF>")
+
 project(uevr-proj)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
@@ -669,6 +675,7 @@ list(APPEND uevr_SOURCES
 	"src/mods/pluginloader/FFakeStereoRenderingFunctions.cpp"
 	"src/mods/pluginloader/FRHITexture2DFunctions.cpp"
 	"src/mods/pluginloader/FRenderTargetPoolHook.cpp"
+	"src/mods/pluginloader/FUObjectArrayFunctions.cpp"
 	"src/mods/uobjecthook/SDKDumper.cpp"
 	"src/mods/vr/Bindings.cpp"
 	"src/mods/vr/CVarManager.cpp"
@@ -707,6 +714,7 @@ list(APPEND uevr_SOURCES
 	"src/mods/pluginloader/FFakeStereoRenderingFunctions.hpp"
 	"src/mods/pluginloader/FRHITexture2DFunctions.hpp"
 	"src/mods/pluginloader/FRenderTargetPoolHook.hpp"
+	"src/mods/pluginloader/FUObjectArrayFunctions.hpp"
 	"src/mods/uobjecthook/SDKDumper.hpp"
 	"src/mods/vr/CVarManager.hpp"
 	"src/mods/vr/D3D11Component.hpp"
