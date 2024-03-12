@@ -25,6 +25,8 @@
 #include "pluginloader/FFakeStereoRenderingFunctions.hpp"
 #include "pluginloader/FRenderTargetPoolHook.hpp"
 #include "pluginloader/FRHITexture2DFunctions.hpp"
+#include "pluginloader/FUObjectArrayFunctions.hpp"
+#include "pluginloader/UScriptStructFunctions.hpp"
 
 #include "UObjectHook.hpp"
 #include "VR.hpp"
@@ -366,12 +368,13 @@ UEVR_UObjectFunctions g_uobject_functions {
     [](UEVR_UObjectHandle obj) {
         return (UEVR_FNameHandle)&UOBJECT(obj)->get_fname();
     },
-};
-
-UEVR_UObjectArrayFunctions g_uobject_array_functions {
-    // find_uobject
-    [](const wchar_t* name) {
-        return (UEVR_UObjectHandle)sdk::find_uobject(name);
+    // get_bool_property
+    [](UEVR_UObjectHandle obj, const wchar_t* name) {
+        return UOBJECT(obj)->get_bool_property(name);
+    },
+    // set_bool_property
+    [](UEVR_UObjectHandle obj, const wchar_t* name, bool value) {
+        UOBJECT(obj)->set_bool_property(name, value);
     },
 };
 
@@ -769,7 +772,7 @@ UEVR_SDKData g_sdk_data {
     &g_sdk_functions,
     &g_sdk_callbacks,
     &g_uobject_functions,
-    &g_uobject_array_functions,
+    &uevr::fuobjectarray::functions,
     &g_ffield_functions,
     &g_fproperty_functions,
     &g_ustruct_functions,
@@ -782,7 +785,8 @@ UEVR_SDKData g_sdk_data {
     &g_malloc_functions,
     &uevr::render_target_pool_hook::functions,
     &uevr::stereo_hook::functions,
-    &uevr::frhitexture2d::functions
+    &uevr::frhitexture2d::functions,
+    &uevr::uscriptstruct::functions
 };
 
 namespace uevr {
